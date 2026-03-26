@@ -142,6 +142,25 @@
         button:active {
             transform: scale(0.95);
         }
+
+        .sound-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: transparent;
+            color: #ffff00;
+            border: 2px solid #ffff00;
+            padding: 8px 20px;
+            font-size: 0.9em;
+            box-shadow: none;
+        }
+
+        .sound-toggle:hover {
+            background: rgba(255, 255, 0, 0.2);
+            color: #ffff00;
+            border-color: #ffff00;
+            transform: scale(1.05);
+        }
     </style>
 </head>
 <body>
@@ -158,6 +177,7 @@
                 P to pause
             </div>
             <button id="startBtn">START GAME</button>
+            <button class="sound-toggle" id="soundToggle">🔊 SOUND ON</button>
         </div>
 
         <!-- Pause Overlay -->
@@ -259,6 +279,140 @@
                    a.x + a.width > b.x &&
                    a.y < b.y + b.height &&
                    a.y + a.height > b.y;
+        }
+
+        // ============================================
+        // SOUND MANAGER
+        // ============================================
+        class SoundManager {
+            constructor() {
+                this.audioContext = null;
+                this.enabled = true;
+            }
+
+            init() {
+                // Create AudioContext on first user interaction
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playShoot() {
+                if (!this.enabled || !this.audioContext) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.1);
+
+                gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 0.1);
+            }
+
+            playExplosion() {
+                if (!this.enabled || !this.audioContext) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                const filter = this.audioContext.createBiquadFilter();
+
+                oscillator.connect(filter);
+                filter.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(200, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 0.3);
+
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(2000, this.audioContext.currentTime);
+                filter.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.3);
+
+                gainNode.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 0.3);
+            }
+
+            playHit() {
+                if (!this.enabled || !this.audioContext) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(150, this.audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 0.2);
+
+                gainNode.gain.setValueAtTime(0.25, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.2);
+
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 0.2);
+            }
+
+            playLevelComplete() {
+                if (!this.enabled || !this.audioContext) return;
+
+                const notes = [262, 330, 392, 523]; // C, E, G, C (major chord)
+
+                notes.forEach((freq, i) => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime + i * 0.1);
+
+                    gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime + i * 0.1);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + i * 0.1 + 0.3);
+
+                    oscillator.start(this.audioContext.currentTime + i * 0.1);
+                    oscillator.stop(this.audioContext.currentTime + i * 0.1 + 0.3);
+                });
+            }
+
+            playGameOver() {
+                if (!this.enabled || !this.audioContext) return;
+
+                const notes = [392, 330, 262, 196]; // G, E, C, G (descending)
+
+                notes.forEach((freq, i) => {
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.audioContext.destination);
+
+                    oscillator.type = 'triangle';
+                    oscillator.frequency.setValueAtTime(freq, this.audioContext.currentTime + i * 0.15);
+
+                    gainNode.gain.setValueAtTime(0.15, this.audioContext.currentTime + i * 0.15);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + i * 0.15 + 0.4);
+
+                    oscillator.start(this.audioContext.currentTime + i * 0.15);
+                    oscillator.stop(this.audioContext.currentTime + i * 0.15 + 0.4);
+                });
+            }
+
+            toggle() {
+                this.enabled = !this.enabled;
+                return this.enabled;
+            }
         }
 
         // ============================================
@@ -592,6 +746,7 @@
 
                 this.state = STATES.MENU;
                 this.input = new InputManager();
+                this.sound = new SoundManager();
 
                 this.player = null;
                 this.bullets = [];
@@ -624,6 +779,7 @@
             }
 
             startGame() {
+                this.sound.init(); // Initialize audio context on user interaction
                 this.state = STATES.PLAYING;
                 this.player = new Player(this.canvas.width / 2 - 12, this.canvas.height - 60);
                 this.bullets = [];
@@ -686,6 +842,7 @@
                     const bullet = this.player.shoot();
                     if (bullet) {
                         this.bullets.push(bullet);
+                        this.sound.playShoot();
                     }
                 }
 
@@ -767,6 +924,7 @@
                             if (destroyed) {
                                 this.score += enemy.scoreValue;
                                 this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color);
+                                this.sound.playExplosion();
                                 this.enemies.splice(j, 1);
                             }
                             break;
@@ -782,6 +940,7 @@
                     if (checkCollision(bullet.getBounds(), this.player.getBounds())) {
                         if (this.player.takeDamage()) {
                             this.createExplosion(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, COLORS.player);
+                            this.sound.playHit();
                         }
                         this.bullets.splice(i, 1);
                     }
@@ -794,6 +953,7 @@
                     if (checkCollision(enemy.getBounds(), this.player.getBounds())) {
                         if (this.player.takeDamage()) {
                             this.createExplosion(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, enemy.color);
+                            this.sound.playHit();
                             this.enemies.splice(i, 1);
                         }
                     }
@@ -817,6 +977,9 @@
                 this.enemies = [];
                 this.bullets = [];
 
+                // Play level complete sound
+                this.sound.playLevelComplete();
+
                 // Transition screen
                 this.state = STATES.LEVEL_TRANSITION;
                 this.transitionTimer = 2.0;
@@ -827,6 +990,7 @@
 
             gameOver() {
                 this.state = STATES.GAME_OVER;
+                this.sound.playGameOver();
                 document.getElementById('finalScore').textContent = this.score;
                 document.getElementById('finalLevel').textContent = this.level;
                 document.getElementById('gameOverOverlay').classList.remove('hidden');
@@ -910,6 +1074,11 @@
             game.hideAllOverlays();
             document.getElementById('menuOverlay').classList.remove('hidden');
             game.state = STATES.MENU;
+        });
+
+        document.getElementById('soundToggle').addEventListener('click', () => {
+            const enabled = game.sound.toggle();
+            document.getElementById('soundToggle').textContent = enabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
         });
 
         // Game loop
